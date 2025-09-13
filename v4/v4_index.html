@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TCL-Web Playground</title>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; height: 100vh; margin: 0; }
+        h1 { text-align: center; margin: 0.5em; }
+        #main-container { display: flex; flex: 1; height: calc(100vh - 100px); }
+        #editor-pane, #preview-pane { flex: 1; padding: 1em; border: 1px solid #ccc; margin: 0.5em; overflow: auto; }
+        #code-editor { width: 100%; height: 95%; font-family: monospace; font-size: 16px; border: 1px solid #ddd; }
+        #controls { text-align: center; padding: 0.5em; }
+        #run-button { font-size: 18px; padding: 10px 20px; cursor: pointer; }
+        #preview-root { border: 1px solid #eee; padding: 1em; min-height: 100%; box-sizing: border-box; }
+        #error-display { color: red; margin-top: 10px; white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+    <h1>TCL-Web Playground</h1>
+    <div id="controls">
+        <button id="run-button">Run</button>
+    </div>
+    <div id="main-container">
+        <div id="editor-pane">
+            <h3>Code</h3>
+            <textarea id="code-editor"></textarea>
+        </div>
+        <div id="preview-pane">
+            <h3>Preview</h3>
+            <div id="preview-root"></div>
+            <div id="error-display"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import Parser from './v4_parser.js';
+        import Compiler from './v4_compiler.js';
+        import Interpreter from './v4_interpreter.js';
+
+        const codeEditor = document.getElementById('code-editor');
+        const runButton = document.getElementById('run-button');
+        const previewRoot = document.getElementById('preview-root');
+        const errorDisplay = document.getElementById('error-display');
+
+        // Pre-populate with the Todo App example
+        codeEditor.value = `
+# --- Todo App ---
+
+# 1. State Initialization
+set todos [list "Learn TCL-Web" "Build an app"]
+set new_todo_text ""
+
+# 2. UI Definition
+c root
+  l title "My Todo List"
+  listbox todo_list
+  c input_area
+    i todo_input -bind new_todo_text
+    b add_button "Add Todo"
+
+# 3. Layout
+pack title -side top
+pack todo_list -side top -fill both -expand yes
+pack input_area -side bottom -fill x
+
+# 4. Initial Data Display
+conf todo_list -items {$todos}
+
+# 5. Actions and Bindings
+bind add_button
+  .click
+    lappend todos {$new_todo_text}
+    set new_todo_text ""
+
+# 6. Reactivity
+watch todos
+  conf todo_list -items {$todos}
+`;
+
+        runButton.addEventListener('click', () => {
+            // Clear previous run
+            previewRoot.innerHTML = '';
+            errorDisplay.textContent = '';
+
+            const sourceCode = codeEditor.value;
+
+            try {
+                // 1. Parse
+                const parser = new Parser();
+                const ast = parser.parse(sourceCode);
+
+                console.log(ast);
+
+                // 2. Compile
+                const compiler = new Compiler();
+                const { bytecode, constants } = compiler.compile(ast);
+
+                console.log(bytecode);
+                console.log(constants);
+
+                // 3. Interpret
+                const interpreter = new Interpreter('preview-root');
+                interpreter.run(bytecode, constants);
+
+            } catch (e) {
+                console.error("Execution Error:", e);
+                errorDisplay.textContent = e.stack;
+            }
+        });
+
+        // Initial run on page load
+        runButton.click();
+
+    </script>
+</body>
+</html>
