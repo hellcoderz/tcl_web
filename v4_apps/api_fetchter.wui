@@ -1,0 +1,26 @@
+# --- API Fetcher ---
+
+# 1. State
+set posts []
+
+# 2. UI
+c root
+  l title "Latest Posts"
+  b fetch_button "Fetch Posts"
+  listbox post_list
+
+# 3. Layout
+pack title -side top
+pack fetch_button -side top
+pack post_list -side top -fill both -expand yes
+
+# 4. Action
+bind fetch_button
+  .click
+    http.get "https://jsonplaceholder.typicode.com/posts"
+      .callback
+        set posts [json extract "title" from {$http_response}]
+
+# 5. Reactivity
+watch posts
+  conf post_list -items {$posts}
